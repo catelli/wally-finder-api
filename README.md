@@ -13,9 +13,11 @@ cd wally-finder-api
 # Reuse wally-ai-training venv (already has torch/ultralytics) or create a new venv:
 ..\wally-ai-training\.venv\Scripts\activate
 pip install -e ".[dev]"
-set WALLY_MODEL_DEVICE=cpu
+set WALLY_MODEL_DEVICE=0
 python scripts/run_api.py
 ```
+
+Inference uses **GPU** (`device: 0` in `configs/model.yaml`). Override with `WALLY_MODEL_DEVICE=cpu` only for debugging.
 
 Weights: copy from training `runs/detect/runs/wally_tiles_train/weights/best.pt` to `models/wally_tiles_best.pt` (already done in this repo).
 

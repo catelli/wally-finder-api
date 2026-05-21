@@ -23,6 +23,7 @@ router = APIRouter(prefix="/inference", tags=["inference"])
 def _to_json_response(result: InferenceResultDto) -> InferenceResponseSchema:
     return InferenceResponseSchema(
         request_id=result.request_id,
+        wally_found=len(result.detections) > 0,
         detection_count=len(result.detections),
         detections=[
             DetectionSchema(

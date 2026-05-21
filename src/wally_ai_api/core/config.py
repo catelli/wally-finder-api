@@ -38,11 +38,13 @@ class ModelSettings(BaseSettings):
     weights_path: str = "models/wally_tiles_best.pt"
     confidence_threshold: float = 0.15
     iou_threshold: float = 0.45
-    device: str | None = None
+    device: str = "0"
     imgsz: int = 256
     tile_size: int = 256
     tile_overlap: int = 64
     merge_iou: float = 0.45
+    max_output_detections: int = 1
+    min_output_confidence: float = 0.88
     warmup_on_startup: bool = True
     class_names: list[str] = Field(default_factory=lambda: ["wally"])
 

@@ -22,6 +22,7 @@ class AnnotatedImageSchema(BaseModel):
 
 class InferenceResponseSchema(BaseModel):
     request_id: str
+    wally_found: bool
     detection_count: int
     detections: list[DetectionSchema]
     annotated_image: AnnotatedImageSchema
