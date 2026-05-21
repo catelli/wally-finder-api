@@ -21,6 +21,17 @@ def test_returns_only_highest_confidence_detection() -> None:
     assert selected[0].confidence == 0.99
 
 
+def test_returns_up_to_four_ranked_detections() -> None:
+    selected = select_primary_detections(
+        [_det(0.99), _det(0.95), _det(0.91), _det(0.9), _det(0.89)],
+        max_count=4,
+        min_confidence=0.88,
+    )
+    assert len(selected) == 4
+    assert selected[0].confidence == 0.99
+    assert selected[3].confidence == 0.9
+
+
 def test_returns_empty_when_below_min_confidence() -> None:
     selected = select_primary_detections([_det(0.7)], min_confidence=0.88)
     assert selected == []

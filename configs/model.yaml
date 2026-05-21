@@ -6,7 +6,7 @@ imgsz: 256
 tile_size: 256
 tile_overlap: 64
 merge_iou: 0.4
-max_output_detections: 1
+max_output_detections: 4
 min_output_confidence: 0.88
 warmup_on_startup: true
 class_names:

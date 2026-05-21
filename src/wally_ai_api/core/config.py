@@ -43,7 +43,7 @@ class ModelSettings(BaseSettings):
     tile_size: int = 256
     tile_overlap: int = 64
     merge_iou: float = 0.45
-    max_output_detections: int = 1
+    max_output_detections: int = 4
     min_output_confidence: float = 0.88
     warmup_on_startup: bool = True
     class_names: list[str] = Field(default_factory=lambda: ["wally"])
