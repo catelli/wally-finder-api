@@ -1,0 +1,257 @@
+---
+description: Rules for building a production-grade Python API to serve the Wally detection model.
+globs:
+  - "**/*.py"
+  - "**/*.yaml"
+  - "**/*.yml"
+  - "**/*.json"
+  - "**/*.toml"
+  - "**/*.md"
+  - "Dockerfile"
+  - "docker-compose.yml"
+alwaysApply: true
+---
+
+# Wally AI API — Python API Architecture Rules
+
+This project is a production-grade Python API responsible for serving an AI model trained to detect Wally in images.
+
+The API must expose endpoints for image upload, model inference, health checks, model metadata, and operational observability.
+
+The project must follow clean architecture, dependency inversion, strong typing, explicit boundaries, testability, and production readiness.
+
+All code, identifiers, classes, functions, variables, modules, filenames, logs, errors, API responses, documentation, and configuration files must be written in English.
+
+Do not add code comments by default.
+
+Only add comments when strictly necessary to explain non-obvious technical constraints, mathematical logic, model behavior, performance trade-offs, or infrastructure-specific details.
+
+Avoid obvious comments. Prefer expressive names, small functions, and clear module boundaries.
+
+## Primary stack
+
+Use:
+
+- Python 3.11+
+- FastAPI
+- Uvicorn or Gunicorn with Uvicorn workers
+- Pydantic v2
+- PyTorch
+- Ultralytics YOLO
+- OpenCV
+- Pillow
+- NumPy
+- Dependency Injector or FastAPI dependency injection
+- structlog or loguru for structured logs
+- pytest
+- pytest-asyncio
+- httpx for API tests
+- ruff for lint and formatting
+- mypy for type checking
+- Docker
+- Docker Compose
+
+Optional but recommended:
+
+- Redis for caching or async job status
+- Celery, RQ, or Dramatiq for background inference jobs
+- Prometheus metrics
+- OpenTelemetry tracing
+- Sentry for error tracking
+
+## Project name
+
+Use the project name:
+
+```txt
+wally-ai-api
+```
+
+## Layout and model directory
+
+Follow this layout. The `models/` directory at the project root is the dedicated folder for model artifacts (weights, checkpoints, exported YOLO `.pt` files). Do not store model binaries under `src/`.
+
+- Load model paths from `configs/model.yaml` and environment variables; default weights path must resolve under `models/`.
+- Keep `models/.gitkeep` so the folder exists in git; large binaries belong in `.gitignore` (document download or mount steps in README).
+- `infrastructure/model/` holds loading, warmup, and inference code only — not weight files.
+- `infrastructure/storage/local_model_repository.py` reads from `models/` via configured paths.
+
+```txt
+wally-ai-api/
+  src/
+    wally_ai_api/
+      __init__.py
+
+      app/
+        __init__.py
+        main.py
+        lifespan.py
+        dependencies.py
+        exception_handlers.py
+        middleware.py
+
+      api/
+        __init__.py
+        router.py
+
+        v1/
+          __init__.py
+          router.py
+
+          endpoints/
+            __init__.py
+            health.py
+            inference.py
+            model.py
+
+          schemas/
+            __init__.py
+            common.py
+            health.py
+            inference.py
+            model.py
+            errors.py
+
+      core/
+        __init__.py
+        config.py
+        constants.py
+        logging.py
+        security.py
+
+      domain/
+        __init__.py
+
+        entities/
+          __init__.py
+          detection.py
+          image.py
+          model.py
+
+        exceptions/
+          __init__.py
+          image_errors.py
+          model_errors.py
+          inference_errors.py
+
+        ports/
+          __init__.py
+          model_repository.py
+          inference_engine.py
+          image_processor.py
+
+      application/
+        __init__.py
+
+        use_cases/
+          __init__.py
+          detect_wally.py
+          get_model_metadata.py
+          validate_image.py
+
+        dto/
+          __init__.py
+          detection_dto.py
+          inference_dto.py
+
+      infrastructure/
+        __init__.py
+
+        model/
+          __init__.py
+          yolo_inference_engine.py
+          model_loader.py
+          model_warmup.py
+          prediction_mapper.py
+
+        image/
+          __init__.py
+          pillow_image_processor.py
+          opencv_image_processor.py
+
+        storage/
+          __init__.py
+          local_model_repository.py
+
+        observability/
+          __init__.py
+          metrics.py
+          tracing.py
+
+      workers/
+        __init__.py
+        tasks.py
+
+      utils/
+        __init__.py
+        file_utils.py
+        image_utils.py
+        id_utils.py
+        time_utils.py
+
+  configs/
+    app.yaml
+    model.yaml
+    logging.yaml
+
+  models/
+    .gitkeep
+
+  tests/
+    unit/
+      test_image_validation.py
+      test_detection_mapping.py
+      test_model_metadata.py
+
+    integration/
+      test_health_endpoint.py
+      test_inference_endpoint.py
+
+    fixtures/
+      images/
+        valid_wally.jpg
+        invalid_file.txt
+
+  scripts/
+    run_api.py
+    warmup_model.py
+    benchmark_inference.py
+
+  docker/
+    Dockerfile
+    docker-compose.yml
+
+  .env.example
+  .gitignore
+  pyproject.toml
+  README.md
+```
+
+## Layer boundaries
+
+- `api/` — HTTP only: routing, request/response schemas, status codes. No PyTorch or file I/O.
+- `application/` — use cases orchestrating domain ports; no framework imports.
+- `domain/` — entities, exceptions, port interfaces; no FastAPI, PyTorch, or OpenCV.
+- `infrastructure/` — adapters implementing ports (YOLO engine, image processors, `local_model_repository` for `models/`).
+- `app/` — FastAPI app factory, lifespan (load model on startup from `models/`), DI wiring.
+
+## Inference and API behavior
+
+- `POST /api/v1/inference` — multipart image upload; return detections with bounding boxes, confidence, and request id.
+- `GET /api/v1/health` — liveness; include model loaded flag when readiness is required.
+- `GET /api/v1/model` — metadata from loaded weights (version, classes, input size) without exposing filesystem paths.
+- Validate MIME type, size limits, and dimensions before inference.
+- Map domain exceptions to consistent error schemas in `api/v1/schemas/errors.py`.
+
+## Configuration
+
+- `configs/model.yaml` — `weights_path` (relative to project root, under `models/`), confidence threshold, device, warmup settings.
+- `configs/app.yaml` — host, port, max upload size, CORS.
+- Secrets and overrides via environment variables; provide `.env.example`.
+
+## Quality bar
+
+- Type-annotate public APIs; run mypy on `src/`.
+- Unit tests for validation, mapping, and metadata; integration tests for health and inference with httpx.
+- Structured JSON logs; never log raw image bytes or secrets.
+- Docker image must copy or mount `models/` and run warmup in lifespan or `scripts/warmup_model.py`.

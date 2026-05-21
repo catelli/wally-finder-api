@@ -1,0 +1,11 @@
+weights_path: models/wally_tiles_best.pt
+confidence_threshold: 0.15
+iou_threshold: 0.45
+device: null
+imgsz: 256
+tile_size: 256
+tile_overlap: 64
+merge_iou: 0.45
+warmup_on_startup: true
+class_names:
+  - wally
