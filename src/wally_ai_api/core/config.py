@@ -44,7 +44,13 @@ class ModelSettings(BaseSettings):
     tile_overlap: int = 64
     merge_iou: float = 0.45
     max_output_detections: int = 4
-    min_output_confidence: float = 0.88
+    min_output_confidence: float = 0.72
+    selection_diversity_iou: float = 0.25
+    snap_to_grid: bool = True
+    grid_cell_size: int = 256
+    cluster_merge_iou: float = 0.4
+    min_box_area_ratio: float = 0.15
+    max_box_area_ratio: float = 1.75
     warmup_on_startup: bool = True
     class_names: list[str] = Field(default_factory=lambda: ["wally"])
 
