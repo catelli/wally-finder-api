@@ -23,40 +23,7 @@ Weights: copy from training `runs/detect/runs/wally_tiles_train/weights/best.pt`
 
 API: http://localhost:8000/docs
 
-## Public URL (ngrok)
-
-Reserved domain: **https://wallyfinder-api.ngrok.app**
-
-1. Install ngrok (once) — binary is saved under `%LOCALAPPDATA%\ngrok\` if you used the project setup.
-2. Configure token (once, do not commit the token):
-
-```powershell
-ngrok config add-authtoken YOUR_TOKEN
-```
-
-3. Start the API on port `8000`, then expose it:
-
-```powershell
-# Terminal 1
-python scripts/run_api.py
-
-# Terminal 2
-.\scripts\start_ngrok.ps1
-```
-
-Or manually:
-
-```powershell
-ngrok http 8000 --url https://wallyfinder-api.ngrok.app
-```
-
-Health check: `https://wallyfinder-api.ngrok.app/api/v1/health`
-
-Inference from the front:
-
-```text
-POST https://wallyfinder-api.ngrok.app/api/v1/inference
-```
+Health: `GET http://localhost:8000/api/v1/health`
 
 ## Inference (front)
 
@@ -65,7 +32,7 @@ POST https://wallyfinder-api.ngrok.app/api/v1/inference
 **JSON (default)** — annotated image as base64 plus boxes:
 
 ```bash
-curl -X POST "https://wallyfinder-api.ngrok.app/api/v1/inference" -F "file=@scene.jpg"
+curl -X POST "http://localhost:8000/api/v1/inference" -F "file=@scene.jpg"
 ```
 
 Response fields: `request_id`, `detections[]`, `annotated_image.data_base64`.
