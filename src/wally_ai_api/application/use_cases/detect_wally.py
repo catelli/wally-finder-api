@@ -1,7 +1,3 @@
-import io
-
-from PIL import Image
-
 from wally_ai_api.application.dto.inference_dto import InferenceResultDto
 from wally_ai_api.application.use_cases.validate_image import ValidateImageUseCase
 from wally_ai_api.core.config import get_model_settings
@@ -9,7 +5,6 @@ from wally_ai_api.domain.entities.image import ImageInput
 from wally_ai_api.domain.ports.image_processor import ImageProcessorPort
 from wally_ai_api.domain.ports.inference_engine import InferenceEnginePort
 from wally_ai_api.utils.detection_selection import select_primary_detections
-from wally_ai_api.utils.grid_refinement import refine_wally_detections
 from wally_ai_api.utils.id_utils import new_request_id
 
 
@@ -27,29 +22,10 @@ class DetectWallyUseCase:
         self._validate_image.execute(image)
         settings = get_model_settings()
         raw_detections = self._inference_engine.predict(image)
-        pil_image = Image.open(io.BytesIO(image.content))
-        from wally_ai_api.infrastructure.model.yolo_inference_engine import YoloTiledInferenceEngine
-
-        vote_counts: dict[tuple[int, int], int] = {}
-        if isinstance(self._inference_engine, YoloTiledInferenceEngine):
-            vote_counts = self._inference_engine.last_grid_votes
-
-        refined = refine_wally_detections(
-            raw_detections,
-            pil_image.width,
-            pil_image.height,
-            grid_size=settings.grid_cell_size,
-            snap_to_grid=settings.snap_to_grid,
-            cluster_iou=settings.cluster_merge_iou,
-            min_area_ratio=settings.min_box_area_ratio,
-            max_area_ratio=settings.max_box_area_ratio,
-            vote_counts=vote_counts,
-        )
         detections = select_primary_detections(
-            refined,
+            raw_detections,
             max_count=settings.max_output_detections,
             min_confidence=settings.min_output_confidence,
-            diversity_iou=settings.selection_diversity_iou,
         )
         annotated = self._image_processor.draw_detections(image, detections)
         return InferenceResultDto(
