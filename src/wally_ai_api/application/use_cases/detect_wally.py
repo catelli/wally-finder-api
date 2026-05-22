@@ -28,6 +28,12 @@ class DetectWallyUseCase:
         settings = get_model_settings()
         raw_detections = self._inference_engine.predict(image)
         pil_image = Image.open(io.BytesIO(image.content))
+        from wally_ai_api.infrastructure.model.yolo_inference_engine import YoloTiledInferenceEngine
+
+        vote_counts: dict[tuple[int, int], int] = {}
+        if isinstance(self._inference_engine, YoloTiledInferenceEngine):
+            vote_counts = self._inference_engine.last_grid_votes
+
         refined = refine_wally_detections(
             raw_detections,
             pil_image.width,
@@ -37,6 +43,7 @@ class DetectWallyUseCase:
             cluster_iou=settings.cluster_merge_iou,
             min_area_ratio=settings.min_box_area_ratio,
             max_area_ratio=settings.max_box_area_ratio,
+            vote_counts=vote_counts,
         )
         detections = select_primary_detections(
             refined,

@@ -17,6 +17,7 @@ from wally_ai_api.domain.ports.inference_engine import InferenceEnginePort
 from wally_ai_api.domain.ports.model_repository import ModelRepositoryPort
 from wally_ai_api.infrastructure.model.model_loader import ModelLoader
 from wally_ai_api.infrastructure.model.prediction_mapper import map_raw_detections
+from wally_ai_api.utils.grid_refinement import count_grid_votes
 from wally_ai_api.utils.tiled_inference import (
     RawDetection,
     compute_tile_windows,
@@ -31,6 +32,7 @@ class YoloTiledInferenceEngine(InferenceEnginePort):
         self._repository = repository
         self._loader = ModelLoader(repository.get_weights_path())
         self._settings = get_model_settings()
+        self._last_grid_votes: dict[tuple[int, int], int] = {}
 
     def is_loaded(self) -> bool:
         return self._loader.is_loaded
@@ -120,5 +122,10 @@ class YoloTiledInferenceEngine(InferenceEnginePort):
                         )
                     )
 
+        self._last_grid_votes = count_grid_votes(merged, self._settings.tile_size)
         filtered = nms_detections(merged, iou_threshold=self._settings.merge_iou)
         return map_raw_detections(filtered)
+
+    @property
+    def last_grid_votes(self) -> dict[tuple[int, int], int]:
+        return self._last_grid_votes

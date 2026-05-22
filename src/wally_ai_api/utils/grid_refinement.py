@@ -148,6 +148,40 @@ def dedupe_grid_cells(detections: list[Detection], grid_size: int) -> list[Detec
     return sorted(best_by_cell.values(), key=lambda item: item.confidence, reverse=True)
 
 
+def count_grid_votes(
+    raw_detections: list[RawDetection],
+    grid_size: int,
+) -> dict[tuple[int, int], int]:
+    votes: dict[tuple[int, int], int] = {}
+    for raw in raw_detections:
+        center_x = (raw.x1 + raw.x2) / 2.0
+        center_y = (raw.y1 + raw.y2) / 2.0
+        cell = (int(center_y // grid_size), int(center_x // grid_size))
+        votes[cell] = votes.get(cell, 0) + 1
+    return votes
+
+
+def apply_tile_vote_boost(
+    detections: list[Detection],
+    vote_counts: dict[tuple[int, int], int],
+    grid_size: int,
+) -> list[Detection]:
+    boosted: list[Detection] = []
+    for detection in detections:
+        cell = grid_cell_key(detection.bbox, grid_size)
+        votes = vote_counts.get(cell, 1)
+        multiplier = 1.0 + 0.1 * min(max(votes - 1, 0), 10)
+        boosted.append(
+            Detection(
+                class_id=detection.class_id,
+                label=detection.label,
+                confidence=min(detection.confidence * multiplier, 1.0),
+                bbox=detection.bbox,
+            )
+        )
+    return boosted
+
+
 def refine_wally_detections(
     detections: list[Detection],
     image_width: int,
@@ -158,16 +192,31 @@ def refine_wally_detections(
     cluster_iou: float,
     min_area_ratio: float,
     max_area_ratio: float,
+    vote_counts: dict[tuple[int, int], int] | None = None,
 ) -> list[Detection]:
     if not detections:
         return []
 
     merged = cluster_merge_detections(detections, iou_threshold=cluster_iou)
     sized = filter_by_box_area(merged, grid_size, min_area_ratio, max_area_ratio)
+    if vote_counts:
+        sized = apply_tile_vote_boost(sized, vote_counts, grid_size)
     if snap_to_grid:
         sized = snap_detections_to_grid(sized, grid_size, image_width, image_height)
-        return dedupe_grid_cells(sized, grid_size)
-    return sorted(sized, key=lambda item: item.confidence, reverse=True)
+        deduped = dedupe_grid_cells(sized, grid_size)
+    else:
+        deduped = sized
+
+    if vote_counts:
+        return sorted(
+            deduped,
+            key=lambda item: (
+                vote_counts.get(grid_cell_key(item.bbox, grid_size), 0),
+                item.confidence,
+            ),
+            reverse=True,
+        )
+    return sorted(deduped, key=lambda item: item.confidence, reverse=True)
 
 
 def raw_to_detections_after_nms(
